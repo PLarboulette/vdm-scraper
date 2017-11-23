@@ -1,7 +1,7 @@
 package actors
 
 import actors.PublicationActor.FindAll
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.{Actor, ActorLogging, Props}
 
 
 class PublicationActor extends Actor with ActorLogging {
@@ -15,6 +15,8 @@ class PublicationActor extends Actor with ActorLogging {
 }
 
 object PublicationActor {
+
+  def props () = Props(new PublicationActor())
 
   case class FindAll (from : Option[String] = None, to : Option[String] = None, author : Option[String] = None)
   case class FindById (id : String)
