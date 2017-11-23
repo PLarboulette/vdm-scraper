@@ -15,13 +15,14 @@ import scala.concurrent.duration._
 
 object PublicationRoutes {
 
-  val stringToDateTime = Unmarshaller.strict[String, DateTime](DateTime.parse)
 
   def getRoutes (publicationActorRef : ActorRef) : Route = {
 
+    implicit val stringToDateTime: Unmarshaller[String, DateTime] = Unmarshaller.strict[String, DateTime](DateTime.parse)
+
     path("api" / "posts") {
       get {
-        parameter("from".as(stringToDateTime).?, "to".as(stringToDateTime).?, "author".as[String].?) {(from, to, author) =>
+        parameter("from".as[DateTime] ?, "to".as[DateTime] ?, "author".as[String] ?) {(from, to, author) =>
           complete {
             implicit val timeout : Timeout = 5.seconds
             val posts = (publicationActorRef ? FindAll(from = from.map(_.toString), to = to.map(_.toString), author = author)).mapTo[List[Publication]]
