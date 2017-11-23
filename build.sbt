@@ -21,6 +21,6 @@ lazy val scraper = project.in(file("scraper"))
   .settings(
     name := "vdm-scraper",
     libraryDependencies ++= Seq(
-
+      "net.ruippeixotog" %% "scala-scraper" % "2.0.0"
     )
   )
