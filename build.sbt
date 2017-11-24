@@ -12,8 +12,8 @@ lazy val api = project.in(file("api"))
       "com.typesafe.akka" %% "akka-stream" % "2.5.4",
       "com.typesafe.akka" %% "akka-actor"  % "2.5.4",
       "com.typesafe.akka" %% "akka-http-spray-json" % "10.0.10",
-      "ch.megard" %% "akka-http-cors" % "0.2.2",
       "org.scalatest" %% "scalatest" % "3.0.4" % Test,
+      "joda-time" % "joda-time" % "2.9.9"
     )
   )
 
