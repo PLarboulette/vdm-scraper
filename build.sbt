@@ -13,7 +13,7 @@ lazy val api = project.in(file("api"))
       "com.typesafe.akka" %% "akka-actor"  % "2.5.4",
       "com.typesafe.akka" %% "akka-http-spray-json" % "10.0.10",
       "org.scalatest" %% "scalatest" % "3.0.4" % Test,
-      "joda-time" % "joda-time" % "2.9.9"
+      "com.github.mauricio" %% "postgresql-async" % "0.2.21"
     )
   )
 
@@ -21,6 +21,7 @@ lazy val scraper = project.in(file("scraper"))
   .settings(
     name := "vdm-scraper",
     libraryDependencies ++= Seq(
-      "net.ruippeixotog" %% "scala-scraper" % "2.0.0"
+      "net.ruippeixotog" %% "scala-scraper" % "2.0.0",
+      "com.github.mauricio" %% "postgresql-async" % "0.2.21"
     )
   )
