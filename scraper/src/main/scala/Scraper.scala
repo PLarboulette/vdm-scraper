@@ -1,11 +1,8 @@
 import javax.swing.text.AbstractDocument.Content
 
 import net.ruippeixotog.scalascraper.browser.{Browser, JsoupBrowser}
-import net.ruippeixotog.scalascraper.browser.JsoupBrowser.JsoupDocument
-import org.jsoup.nodes.DocumentType
-import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
-import net.ruippeixotog.scalascraper.dsl.DSL.Parse._
+import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.model.Element
 
 object Scraper extends App {
@@ -54,19 +51,37 @@ object Scraper extends App {
   def processArticle (article : Element) : Boolean = {
     val content = processContent(article)
     val footer = processFooter(article)
+    println(footer.getOrElse("No data"))
     true
   }
 
   def processContent (article: Element) : String = {
     val content = article tryExtract element(".panel-content")
-    ""
+    "TODO"
   }
 
-  def processFooter (footer : Element) : String = {
-    val text_center = footer tryExtract elementList(".text-center")
-    val div = text_center tryExtract element("div")
-    val div2 = div tryExtract text ("div")
-    println(div2.getOrElse("No line for author"))
-    ""
+  /**
+    * Extrat data of footer (author, date)
+    * @param footer the footer element
+    * @return an option of tuple which contains (author, date)
+    */
+  def processFooter (footer : Element) : Option[(String, Long)] = {
+    // Get all the divs which contains footer information (author, date ...)
+    val divs = footer tryExtract elementList(".text-center") tryExtract element ("div")
+    // Extract text for these divs
+    val footerText = divs tryExtract text ("div")
+    // Transform footerText to obtain "line" which is the real line of data (like "Par X / Le ....")
+    footerText.map(_.map {_.map { line => extractDataForLine(line)}}).flatMap(_.headOption.getOrElse(None))
   }
+
+  /**
+    * Extract author and date from a line of data
+    * @param line the line of data
+    * @return a tuple (String, Long) with author and date
+    */
+  def extractDataForLine (line : Option[String]) : (String, Long) = {
+    ("TODO", -1)
+  }
+
+
 }
