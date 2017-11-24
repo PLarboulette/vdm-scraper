@@ -6,11 +6,10 @@ import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import models.Publication
 import akka.pattern.ask
-import utils.MyJsonProtocol._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import org.joda.time.DateTime
-
+import utils.JsonFormats._
 import scala.concurrent.duration._
 
 object PublicationRoutes {
