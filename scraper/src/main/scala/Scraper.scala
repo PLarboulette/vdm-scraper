@@ -11,9 +11,9 @@ object Scraper extends App {
 
   case class Data (content : Option[String], date : Option[Long], author : Option[Content])
 
-  launch(1, List.empty[Data], test = true)
+  launch(200, 1, List.empty[Data], test = true)
 
-  def launch (indexPage : Int, previousResult : List[Data], test : Boolean) : Boolean = {
+  def launch (maxElements  : Int, indexPage : Int, previousResult : List[Data], test : Boolean) : Boolean = {
 
     val browser = JsoupBrowser()
     val results  = processPage(browser, indexPage) ::: previousResult
