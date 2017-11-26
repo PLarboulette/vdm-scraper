@@ -2,9 +2,9 @@ import actors.PublicationActor
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
-import com.github.mauricio.async.db.postgresql.PostgreSQLConnection
-import com.github.mauricio.async.db.postgresql.util.URLParser
+import org.mongodb.scala.{Document, MongoClient, MongoCollection, MongoDatabase}
 import routes.PublicationRoutes
+
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor}
 
@@ -15,6 +15,10 @@ object Api extends App {
   implicit val system: ActorSystem = ActorSystem("vdm-scraper-api")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val ec: ExecutionContextExecutor = system.dispatcher
+
+  val mongoClient: MongoClient = MongoClient("mongodb://localhost:27017")
+  val database: MongoDatabase = mongoClient.getDatabase("vdm-scraper")
+  implicit val coll: MongoCollection[Document] = database.getCollection("publications")
 
   val publicationActor = system.actorOf(PublicationActor.props(), "PublicationActor")
 

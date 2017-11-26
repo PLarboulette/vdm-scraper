@@ -2,17 +2,36 @@ package services
 
 import java.time.Instant
 
+import org.mongodb.scala.MongoCollection
+import database.MongoHelper
 import models.Publication
+import org.bson.conversions.Bson
+import org.mongodb.scala.bson.Document
+import org.mongodb.scala.model.Filters
+import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Filters._
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object PublicationService {
 
 
-  def findAll (from : Option[String] = None, to : Option[String] = None, author : Option[String] = None) (implicit ec : ExecutionContext) : Future[List[Publication]] = {
-    // TODO
-    val fromInstant = from.map(Instant.parse)
-    Future.successful(List.empty)
+  def findAll (from : Option[Long] = None, to : Option[Long] = None, author : Option[String] = None) (implicit coll : MongoCollection[Document], ec : ExecutionContext) : Future[List[Publication]] = {
+
+    def addFilter (filter : Option[Bson], old : Bson): Bson = {
+      filter.map (value => Filters.and(old, value)).getOrElse(Filters.and(old))
+    }
+
+    val fromFilter = addFilter(from.map {value => gt("date", value)}, Filters.and())
+    val toFilter  = addFilter(to.map {value => lt("date", value)}, fromFilter)
+    val allFilters = addFilter(author.map(value => equal("author", value)), toFilter)
+    val finalFilters = if(from.isEmpty && to.isEmpty && author.isEmpty) None else Some(allFilters)
+
+    for {
+      publications <- MongoHelper.find[Publication](Publication.toPublication, finalFilters)
+    } yield  {
+      publications
+    }
   }
 
   def findById (id : String) (implicit ec : ExecutionContext) : Future[Option[Publication]] = {

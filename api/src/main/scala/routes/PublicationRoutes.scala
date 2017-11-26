@@ -27,8 +27,8 @@ object PublicationRoutes {
         parameter("from".as[Instant] ?, "to".as[Instant] ?, "author".as[String] ?) {(from, to, author) =>
           complete {
             implicit val timeout : Timeout = 5.seconds
-            val posts = (publicationActorRef ? FindAll(from = from.map(_.toString), to = to.map(_.toString), author = author)).mapTo[List[Publication]]
-            "OK"
+            val posts = (publicationActorRef ? FindAll(from = from.map(_.toEpochMilli), to = to.map(_.toEpochMilli), author = author)).mapTo[List[Publication]]
+            posts
           }
         }
       }
