@@ -10,13 +10,14 @@ import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.model.Element
 
+import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 object Scraper extends App {
 
   println("Hello world, I'm the scraper ! ")
 
-  case class Data (content : Option[String], date : Option[Long], author : Option[Content])
+  case class Data (content : String, author : String, date : Long)
 
   launch(200, 1, List.empty[Data], test = true)
 
@@ -32,7 +33,6 @@ object Scraper extends App {
       launch(indexPage +1, results, test)
     }
     */
-
     true
   }
 
@@ -41,20 +41,37 @@ object Scraper extends App {
 
     val items = page tryExtract elementList ("article") tryExtract elementList (".art-panel") tryExtract elementList (".col-xs-12")
 
-    items.map(_.map(_.map(_.map(_.map(_.map(processArticle))))))
+    items.map(_.map(_.map(_.map(_.map(_.map(processArticle(_).map {writeElement}))))))
     List.empty
   }
 
-  def processArticle (article : Element) : Boolean = {
-    val content = processContent(article)
-    val footer = processFooter(article)
-    println(footer.getOrElse("No data"))
-    true
+  def writeElement (data : Data) : Future[Unit] = {
+    println(data)
+    println("####################")
+    Future.successful()
   }
 
-  def processContent (article: Element) : String = {
-    val content = article tryExtract element(".panel-content")
-    "TODO"
+  def processArticle (article : Element) : Option[Data] = {
+    processContent(article)
+  }
+
+  def processContent (article: Element) : Option[Data] = {
+    val content = article tryExtract element(".panel-content") tryExtract element("p")
+    val contentText = content tryExtract text ("a")
+    contentText.flatMap(
+      _.flatMap(
+        _.flatMap(
+          item => {
+            processFooter(article) match {
+              case Some((author, date)) =>
+                Some(Data(item, author, date))
+              case None =>
+                None
+            }
+          }
+        )
+      )
+    )
   }
 
   /**
@@ -69,7 +86,6 @@ object Scraper extends App {
     val footerText = divs tryExtract text ("div")
     // Transform footerText to obtain "line" which is the real line of data (like "Par X / Le ....")
     footerText.map(_.flatMap {_.flatMap {_.map( line => extractDataForLine(line))}}).flatMap(_.headOption).getOrElse(None)
-
   }
 
   /**
