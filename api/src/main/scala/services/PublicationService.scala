@@ -19,8 +19,8 @@ object PublicationService {
       filter.map (value => Filters.and(old, value)).getOrElse(Filters.and(old))
     }
 
-    val fromFilter = addFilter(from.map {value => gt("date", value)}, Filters.and())
-    val toFilter  = addFilter(to.map {value => lt("date", value)}, fromFilter)
+    val fromFilter = addFilter(from.map {value => gte("date", value)}, Filters.and())
+    val toFilter  = addFilter(to.map {value => lte("date", value)}, fromFilter)
     val allFilters = addFilter(author.map(value => equal("author", value)), toFilter)
     val finalFilters = if(from.isEmpty && to.isEmpty && author.isEmpty) None else Some(allFilters)
 
@@ -31,9 +31,8 @@ object PublicationService {
     }
   }
 
-  def findById (id : String) (implicit ec : ExecutionContext) : Future[Option[Publication]] = {
-    // TODO
-    Future.successful(None)
+  def findById (id : String) (implicit coll : MongoCollection[Document], ec : ExecutionContext) : Future[Option[Publication]] = {
+    MongoHelper.findById[Publication](id, Publication.toPublication)
   }
 
   def cleanDb () (implicit coll : MongoCollection[Document], ec : ExecutionContext) : Future[Completed] = {

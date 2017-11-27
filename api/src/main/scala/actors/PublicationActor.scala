@@ -16,6 +16,9 @@ class PublicationActor () (implicit coll : MongoCollection[Document]) extends Ac
     case FindAll(from, to , author) =>
       PublicationService.findAll(from, to, author) pipeTo sender
 
+    case FindById(id) =>
+      PublicationService.findById(id) pipeTo sender
+
     case CleanDB() =>
       println("Hello")
       PublicationService.cleanDb()
