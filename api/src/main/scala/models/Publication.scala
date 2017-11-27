@@ -22,7 +22,7 @@ object Publication {
     Publication(
       document.get("_id").map(_.asString().getValue).getOrElse(""),
       document.get("content").map(_.asString().getValue),
-      document.get("date").map(_.asDouble().getValue.toLong),
+      document.get("date").map(_.asInt64().getValue),
       document.get("author").map(_.asString().getValue)
     )
   }

@@ -1,7 +1,7 @@
 package routes
 import java.time.Instant
 
-import actors.PublicationActor.{FindAll, FindById}
+import actors.PublicationActor.{CleanDB, FindAll, FindById}
 import akka.http.scaladsl.server.Directives.{complete, get, path, pathPrefix, _}
 import akka.actor.ActorRef
 import akka.http.scaladsl.server.Route
@@ -37,6 +37,14 @@ object PublicationRoutes {
         implicit val timeout: Timeout = 5.seconds
         val post = (publicationActorRef ? FindById(id)).mapTo[Option[Publication]]
         complete(post)
+      }
+    } ~ path("admin" / "clean") {
+      get {
+        complete {
+          implicit val timeout : Timeout = 5.seconds
+          publicationActorRef ! CleanDB()
+          "DB Cleaned !"
+        }
       }
     }
   }

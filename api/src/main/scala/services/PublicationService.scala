@@ -1,15 +1,12 @@
 package services
 
-import java.time.Instant
-
-import org.mongodb.scala.MongoCollection
 import database.MongoHelper
 import models.Publication
 import org.bson.conversions.Bson
 import org.mongodb.scala.bson.Document
 import org.mongodb.scala.model.Filters
-import org.mongodb.scala.model.Filters.equal
-import org.mongodb.scala.model.Filters._
+import org.mongodb.scala.model.Filters.{equal, _}
+import org.mongodb.scala.{Completed, MongoCollection}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -37,5 +34,9 @@ object PublicationService {
   def findById (id : String) (implicit ec : ExecutionContext) : Future[Option[Publication]] = {
     // TODO
     Future.successful(None)
+  }
+
+  def cleanDb () (implicit coll : MongoCollection[Document], ec : ExecutionContext) : Future[Completed] = {
+    MongoHelper.cleanDb[Publication]()
   }
 }

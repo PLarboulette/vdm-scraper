@@ -22,24 +22,6 @@ object MongoHelper {
     } yield documents.toList.map(fn).headOption
   }
 
-  def create[T](item: T, fn : T => Document)(implicit coll : MongoCollection[Document], ec: ExecutionContext): Future[Completed] = {
-    coll.insertOne(fn(item)).toFuture().recoverWith {case e : Throwable => Future.failed(e)}
-  }
-
-  def update[T](id : String, newItem : T, fn : T => Document)(implicit coll : MongoCollection[Document], ec: ExecutionContext): Future[Either[String, Boolean]] = {
-    coll.replaceOne(equal("_id", id), fn(newItem)).toFuture().recoverWith {
-      case e : Throwable => Future.failed(e)
-    }.map(result => if(result.getMatchedCount == 1) Right(true) else Left(s"No update made : $id"))
-  }
-
-  def delete[T] (id : String) (implicit coll : MongoCollection[Document], ec : ExecutionContext) : Future[Boolean] = {
-    for {
-      deletedItem <- coll.deleteOne(equal("_id", id)).toFuture()
-        .recoverWith { case e: Throwable => Future.failed(e)}
-        .map(result => if (result.getDeletedCount == 1) true else false)
-    } yield deletedItem
-  }
-
   def cleanDb[T] () (implicit coll: MongoCollection[Document], ec: ExecutionContext): Future[Completed] = {
     coll.drop().toFuture()
   }
