@@ -2,6 +2,7 @@
 import java.text.SimpleDateFormat
 import java.util.UUID
 
+import com.typesafe.config.ConfigFactory
 import net.ruippeixotog.scalascraper.browser.{Browser, JsoupBrowser}
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL._
@@ -16,7 +17,7 @@ object Scraper extends App {
 
   println("Hello world, I'm the scraper ! ")
 
-  val mongoClient: MongoClient = MongoClient("mongodb://localhost:27017")
+  val mongoClient: MongoClient = MongoClient(ConfigFactory.load().getString("database.url"))
   val database: MongoDatabase = mongoClient.getDatabase("vdm-scraper")
   implicit val coll: MongoCollection[Document] = database.getCollection("publications")
 

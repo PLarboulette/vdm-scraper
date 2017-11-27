@@ -7,6 +7,7 @@ import routes.PublicationRoutes
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor}
+import com.typesafe.config.ConfigFactory
 
 object Api extends App {
 
@@ -16,7 +17,7 @@ object Api extends App {
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-  val mongoClient: MongoClient = MongoClient("mongodb://localhost:27017")
+  val mongoClient: MongoClient = MongoClient(ConfigFactory.load().getString("database.url"))
   val database: MongoDatabase = mongoClient.getDatabase("vdm-scraper")
   implicit val coll: MongoCollection[Document] = database.getCollection("publications")
 
