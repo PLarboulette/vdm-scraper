@@ -27,7 +27,7 @@ object PublicationService {
     for {
       publications <- MongoHelper.find[Publication](Publication.toPublication, finalFilters)
     } yield  {
-      publications
+      publications.sortBy(_.date).reverse
     }
   }
 

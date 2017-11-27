@@ -41,9 +41,7 @@ object Scraper extends App {
 
   def processPage (browser : Browser, indexPage : Int) : List[Data] = {
     val page = browser.get(s"http://www.viedemerde.fr/1page=$indexPage")
-
     val items = page tryExtract elementList ("article") tryExtract elementList (".art-panel") tryExtract elementList (".col-xs-12")
-
     items.map(_.map(_.map(_.map(_.map(_.map(processArticle(_).map {writeElement}))))))
     List.empty
   }
@@ -53,31 +51,34 @@ object Scraper extends App {
   }
 
   def processArticle (article : Element) : Option[Data] = {
-    processContent(article)
+    val contentOpt = processContent(article)
+    println(contentOpt)
+    val footerOpt = processFooter(article)
+    if (contentOpt.isDefined && footerOpt.isDefined){
+      val content = contentOpt.get
+      val (author, date) = footerOpt.get
+      Some(Data(UUID.randomUUID().toString, content, author, date))
+    } else {
+      None
+    }
   }
 
-  def processContent (article: Element) : Option[Data] = {
+  def processContent (article: Element) : Option[String] = {
     val contents = article tryExtract element(".panel-content") tryExtract element("p")
-    val contentText = contents tryExtract text ("a")
-    contentText.flatMap(
-      _.flatMap(
-        _.flatMap(
-          content => {
-            if (content.contains("VDM")) {
-              processFooter(article) match {
-                case Some((author, date)) =>
-                  Some(Data(UUID.randomUUID().toString, content, author, date))
-                case None =>
-                  None
-              }
-            } else {
-              None
-            }
+    val contentText = if (contents.exists(_.isDefined == true)) {
+      // Main version, works for the major part of the publications
+      (contents tryExtract text("a")).flatten.flatten
+    } else {
+      // Second version, for other format of HTML elements
+      val elementsOpt = article tryExtract elementList(".panel-content")  tryExtract elementList("p")
+      elementsOpt.map {
+        _.map { opt =>
+            if (opt.isDefined && opt.get.nonEmpty) opt.get.head tryExtract text ("a") else None
+        }
+      }.flatMap(_.find(_.isDefined)).getOrElse(None)
+    }
 
-          }
-        )
-      )
-    )
+    contentText.map(content => { if (content.trim.nonEmpty) Some(content) else None }).getOrElse(None)
   }
 
   /**
