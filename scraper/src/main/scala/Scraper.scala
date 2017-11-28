@@ -1,6 +1,6 @@
 
 import java.text.SimpleDateFormat
-import java.util.UUID
+import java.util.{Locale, UUID}
 
 import com.typesafe.config.ConfigFactory
 import net.ruippeixotog.scalascraper.browser.{Browser, JsoupBrowser}
@@ -43,7 +43,7 @@ object Scraper extends App {
   def processPage (browser : Browser, indexPage : Int) : List[Data] = {
     val page = browser.get(s"http://www.viedemerde.fr/1page=$indexPage")
     val items = page tryExtract elementList ("article") tryExtract elementList (".art-panel") tryExtract elementList (".col-xs-12")
-    items.map(_.map(_.map(_.map(_.map(_.map(processArticle(_).map {writeElement}))))))
+    items.map(_.map(_.map(_.map(_.map(_.map(processArticle(_).map {item => writeElement(item)}))))))
     List.empty
   }
 
@@ -105,10 +105,11 @@ object Scraper extends App {
     Try {
       val data = line.split("/")
       val author = data(0).split("Par")(1).replace("-", "").trim
-      (author, new SimpleDateFormat("E d MMMM yyyy k:m").parse(data(1).trim).toInstant.toEpochMilli)
+      (author, new SimpleDateFormat("E d MMMM yyyy k:m", Locale.FRANCE).parse(data(1).trim).toInstant.toEpochMilli)
     } match {
       case Success(date2) => Some(date2)
-      case Failure(e) => None
+      case Failure(e) =>
+        None
     }
   }
 }
