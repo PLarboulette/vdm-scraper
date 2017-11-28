@@ -28,23 +28,26 @@ object Scraper extends App {
   def launch (maxElements  : Int, indexPage : Int, previousResult : List[Data], test : Boolean) : Boolean = {
 
     val browser = JsoupBrowser()
-    val results  = processPage(browser, indexPage) ::: previousResult
 
-    /*
-    if (results.size == 200) {
-      // Insert in database
+    val results = processPage(browser, indexPage).map {
+      item => if (previousResult.exists(elem => elem.author == item.author && elem.date == item.date && elem.content == item.content )) None else Some(item)
+    }.filter(_.isDefined).map(_.get) ::: previousResult
+
+    if (results.size >= maxElements) {
+      results.take(200).map(writeElement)
+      println("End ! ")
     } else {
-      launch(indexPage +1, results, test)
+      launch(200, indexPage + 1, results, test)
     }
-    */
     true
   }
 
   def processPage (browser : Browser, indexPage : Int) : List[Data] = {
-    val page = browser.get(s"http://www.viedemerde.fr/1page=$indexPage")
+    val page = browser.get(s"http://www.viedemerde.fr/?page=$indexPage")
     val items = page tryExtract elementList ("article") tryExtract elementList (".art-panel") tryExtract elementList (".col-xs-12")
-    items.map(_.map(_.map(_.map(_.map(_.map(processArticle(_).map {item => writeElement(item)}))))))
-    List.empty
+    items.map {_.flatMap {_.map {_.flatMap {_.map {_.map { step6 =>processArticle(step6)
+              }}.getOrElse(List())}}.getOrElse(List())}}.getOrElse(List())
+      .filter(_.isDefined).map(_.get)
   }
 
   def writeElement (data : Data) : Future[Completed] = {
@@ -53,7 +56,6 @@ object Scraper extends App {
 
   def processArticle (article : Element) : Option[Data] = {
     val contentOpt = processContent(article)
-    println(contentOpt)
     val footerOpt = processFooter(article)
     if (contentOpt.isDefined && footerOpt.isDefined){
       val content = contentOpt.get
