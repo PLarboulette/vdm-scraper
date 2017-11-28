@@ -1,5 +1,8 @@
 #!/bin/sh
-echo "[docker-compose down] STOP"
+echo "[docker:publishLocal] START"
+sbt docker:publishLocal
+echo "[docker:publishLocal] OK"
+echo "[docker-compose down] StARt"
 docker-compose down
 echo "[docker-compose down] OK"
 echo "-----------------------"
