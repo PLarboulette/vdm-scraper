@@ -3,11 +3,11 @@ package models
 import org.mongodb.scala.bson.collection.Document
 
 case class Publication(id : String, content : Option[String], date : Option[Long], author : Option[String])
-{
-
-}
 
 object Publication {
+
+  case class PublicationsOutput (count : Int, posts : List[Publication])
+  case class PublicationOutput (post : Option[Publication])
 
   implicit def toDocument (publication : Publication) : Document = {
     Document(
