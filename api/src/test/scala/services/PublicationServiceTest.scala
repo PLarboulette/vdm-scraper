@@ -1,5 +1,8 @@
 package services
 
+import java.time.Instant
+import java.time.temporal.{ChronoField, ChronoUnit}
+
 import models.Publication
 import org.mongodb.scala.{Completed, Document, MongoClient, MongoCollection, MongoDatabase}
 import org.scalatest.{AsyncWordSpec, BeforeAndAfterEach, Matchers}
@@ -11,8 +14,8 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
 
 
   val mongoClient: MongoClient = MongoClient("mongodb://localhost:27018")
-  val database: MongoDatabase = mongoClient.getDatabase("vdm-scraper-test")
-  implicit val coll: MongoCollection[Document] = database.getCollection("players")
+  val database: MongoDatabase = mongoClient.getDatabase("vdm-scraper-test-services")
+  implicit val coll: MongoCollection[Document] = database.getCollection("publications")
 
   private def cleanDb() = {
     Await.ready(coll.drop().toFuture(), 3 seconds)
@@ -22,8 +25,11 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
 
   override def afterEach(): Unit = cleanDb()
 
+  // Instant.now().plusMillis()   index * 3 600 000  là dedans pour rajouter des heures
+//  Instant.now().plus(4, ChronoUnit.HOURS)
+
   def insertData (nbElementsToInsert : Int): List[Future[Completed]] = {
-    val publicationsToInsert = (1 to nbElementsToInsert).map(index => Publication(s"$index", Some(s"Content $index"), Some(index * 10.toLong), Some(s"Author $index")))
+    val publicationsToInsert = (1 to nbElementsToInsert).map(index => Publication(s"$index", Some(s"Content $index"), Some(index * 10.toLong), Some(s"Author$index")))
     val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
     listDocuments.map { coll.insertOne(_).toFuture()}
   }
@@ -49,17 +55,17 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
       val nbElementsToInsert = 5
       Future.sequence(insertData(nbElementsToInsert))
         .flatMap { _ =>
-          PublicationService.findAll(author = Some("Author 3")).map {
+          PublicationService.findAll(author = Some("Author3")).map {
             results =>
               results should have size 1
-              results.head.author.getOrElse("") should equal ("Author 3")
+              results.head.author.getOrElse("") should equal ("Author3")
           }
         }
     }
 
     "return a list of publications (many items) filtered by author" in {
 
-      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(index * 10.toLong), Some(if(index < 3) "Pierre" else "Dark Vador")))
+      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(index * 10.toLong), Some(if(index < 3) "Pierre" else "Unicorn")))
       val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
       val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
 
@@ -80,7 +86,7 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
           PublicationService.findAll(from = Some(12)).map {
             results =>
               results should have size 4
-              results.head.author.getOrElse("") should equal ("Author 5")
+              results.head.author.getOrElse("") should equal ("Author5")
               results.head.date.getOrElse(0) should equal (50)
           }
         }
@@ -93,7 +99,7 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
           PublicationService.findAll(to = Some(45)).map {
             results =>
               results should have size 4
-              results.head.author.getOrElse("") should equal ("Author 4")
+              results.head.author.getOrElse("") should equal ("Author4")
               results.head.date.getOrElse(0) should equal (40)
           }
         }
@@ -103,10 +109,10 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
       val nbElementsToInsert = 5
       Future.sequence(insertData(nbElementsToInsert))
         .flatMap { _ =>
-          PublicationService.findAll(to = Some(45), author = Some("Author 4")).map {
+          PublicationService.findAll(to = Some(45), author = Some("Author4")).map {
             results =>
               results should have size 1
-              results.head.author.getOrElse("") should equal ("Author 4")
+              results.head.author.getOrElse("") should equal ("Author4")
               results.head.date.getOrElse(0) should equal (40)
           }
         }
@@ -120,7 +126,7 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
           PublicationService.findAll(from = Some(12), to = Some(45)).map {
             results =>
               results should have size 3
-              results.head.author.getOrElse("") should equal ("Author 4")
+              results.head.author.getOrElse("") should equal ("Author4")
               results.head.date.getOrElse(0) should equal (40)
           }
         }
