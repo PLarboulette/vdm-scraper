@@ -1,5 +1,8 @@
 package routes
 
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+
 import actors.PublicationActor
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.HttpResponse
@@ -14,6 +17,7 @@ import org.mongodb.scala.{Completed, MongoClient, MongoCollection, MongoDatabase
 import org.scalatest.{AsyncWordSpec, BeforeAndAfterEach, Matchers}
 import spray.json._
 import utils.JsonFormats._
+
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 
@@ -32,6 +36,8 @@ class PublicationRoutesTest extends AsyncWordSpec with Matchers with ScalatestRo
 
   val publicationRoutes: Route = PublicationRoutes.getRoutes(publicationActor)
 
+  val now: Instant = Instant.ofEpochMilli(1511982333000L)
+
   implicit val publicationUnmarshaller : Unmarshaller[String, Publication] =
     Unmarshaller.strict[String, Publication](str => str.parseJson.convertTo[Publication])
 
@@ -42,7 +48,6 @@ class PublicationRoutesTest extends AsyncWordSpec with Matchers with ScalatestRo
     implicit ec => {
       implicit response =>
         response.entity.toStrict(5.seconds).map(item => {
-          println(item.data.utf8String.parseJson)
           item.data.utf8String.parseJson.convertTo[PublicationsOutput]
         })
     }
@@ -61,7 +66,7 @@ class PublicationRoutesTest extends AsyncWordSpec with Matchers with ScalatestRo
   override def afterEach(): Unit = cleanDb()
 
   def insertData (nbElementsToInsert : Int): List[Future[Completed]] = {
-    val publicationsToInsert = (1 to nbElementsToInsert).map(index => Publication(s"$index", Some(s"Content $index"), Some(index * 10.toLong), Some(s"Author $index")))
+    val publicationsToInsert = (1 to nbElementsToInsert).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(s"Author $index")))
     val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
     listDocuments.map { coll.insertOne(_).toFuture()}
   }
@@ -81,7 +86,7 @@ class PublicationRoutesTest extends AsyncWordSpec with Matchers with ScalatestRo
     }
 
     "return a non-empty list of publications for GET requests to the /api/posts path" in {
-      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(index * 10.toLong), Some(s"Author $index")))
+      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(s"Author $index")))
       val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
       val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
       Future.sequence(futureRes)
@@ -93,7 +98,7 @@ class PublicationRoutesTest extends AsyncWordSpec with Matchers with ScalatestRo
     }
 
     "return a non-empty list of publications filtered by author for GET requests to the /api/posts?author=X path" in {
-      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(index * 10.toLong), Some(s"Author$index")))
+      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(s"Author$index")))
       val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
       val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
 
@@ -106,13 +111,13 @@ class PublicationRoutesTest extends AsyncWordSpec with Matchers with ScalatestRo
     }
 
     "return a non-empty list of publications filtered by from for GET requests to the /api/posts?from=X path" in {
-      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(index * 10.toLong), Some(s"Author$index")))
+      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(s"Author$index")))
       val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
       val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
 
       Future.sequence(futureRes)
         .flatMap { _ =>
-          Get("/api/posts?from=Author1") ~> publicationRoutes ~> check {
+          Get("/api/posts?author=Author1") ~> publicationRoutes ~> check {
             responseAs[PublicationsOutput] shouldEqual PublicationsOutput(1, publicationsToInsert.toList.filter(_.author.contains("Author1")))
           }
         }

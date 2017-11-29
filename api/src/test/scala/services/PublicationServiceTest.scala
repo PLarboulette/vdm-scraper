@@ -25,11 +25,11 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
 
   override def afterEach(): Unit = cleanDb()
 
-  // Instant.now().plusMillis()   index * 3 600 000  là dedans pour rajouter des heures
-//  Instant.now().plus(4, ChronoUnit.HOURS)
+  val now: Instant = Instant.ofEpochMilli(1511982333000L)
 
   def insertData (nbElementsToInsert : Int): List[Future[Completed]] = {
-    val publicationsToInsert = (1 to nbElementsToInsert).map(index => Publication(s"$index", Some(s"Content $index"), Some(index * 10.toLong), Some(s"Author$index")))
+    val publicationsToInsert = (1 to nbElementsToInsert).map(index =>
+      Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(s"Author$index")))
     val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
     listDocuments.map { coll.insertOne(_).toFuture()}
   }
@@ -46,7 +46,7 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
           PublicationService.findAll().map {
             results =>
               results should have size nbElementsToInsert
-              results.head.date.getOrElse(0L) should be > results.last.date.getOrElse(0L)
+              results.head.date.getOrElse("") should be > results.last.date.getOrElse("")
           }
         }
     }
@@ -65,7 +65,7 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
 
     "return a list of publications (many items) filtered by author" in {
 
-      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(index * 10.toLong), Some(if(index < 3) "Pierre" else "Unicorn")))
+      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(1, ChronoUnit.DAYS).toString), Some(if(index < 3) "Pierre" else "Unicorn")))
       val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
       val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
 
@@ -79,72 +79,72 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
     }
 
 
-    "return a list of publications filtered by from timestamp" in {
+    "return a list of publications filtered by from" in {
       val nbElementsToInsert = 5
       Future.sequence(insertData(nbElementsToInsert))
         .flatMap { _ =>
-          PublicationService.findAll(from = Some(12)).map {
+          PublicationService.findAll(from = Some(now.plus(2, ChronoUnit.DAYS).toString)).map {
             results =>
               results should have size 4
               results.head.author.getOrElse("") should equal ("Author5")
-              results.head.date.getOrElse(0) should equal (50)
+              results.head.date.getOrElse("") should equal (now.plus(5, ChronoUnit.DAYS).toString)
           }
         }
     }
 
-    "return a list of publications filtered by to timestamp" in {
+    "return a list of publications filtered by to" in {
       val nbElementsToInsert = 5
       Future.sequence(insertData(nbElementsToInsert))
         .flatMap { _ =>
-          PublicationService.findAll(to = Some(45)).map {
-            results =>
-              results should have size 4
-              results.head.author.getOrElse("") should equal ("Author4")
-              results.head.date.getOrElse(0) should equal (40)
-          }
-        }
-    }
-
-    "return a list of publications filtered by to timestamp and author" in {
-      val nbElementsToInsert = 5
-      Future.sequence(insertData(nbElementsToInsert))
-        .flatMap { _ =>
-          PublicationService.findAll(to = Some(45), author = Some("Author4")).map {
-            results =>
-              results should have size 1
-              results.head.author.getOrElse("") should equal ("Author4")
-              results.head.date.getOrElse(0) should equal (40)
-          }
-        }
-    }
-
-
-    "return a list of publications filtered by from timestamp and to timestamp" in {
-      val nbElementsToInsert = 5
-      Future.sequence(insertData(nbElementsToInsert))
-        .flatMap { _ =>
-          PublicationService.findAll(from = Some(12), to = Some(45)).map {
+          PublicationService.findAll(to = Some(now.plus(3, ChronoUnit.DAYS).toString)).map {
             results =>
               results should have size 3
-              results.head.author.getOrElse("") should equal ("Author4")
-              results.head.date.getOrElse(0) should equal (40)
+              results.head.author.getOrElse("") should equal ("Author3")
+              results.head.date.getOrElse("") should equal (now.plus(3, ChronoUnit.DAYS).toString)
           }
         }
     }
 
-    "return a list of publications filtered by from timestamp, to timestamp and author" in {
+    "return a list of publications filtered by to and author" in {
+      val nbElementsToInsert = 5
+      Future.sequence(insertData(nbElementsToInsert))
+        .flatMap { _ =>
+          PublicationService.findAll(to = Some(now.plus(3, ChronoUnit.DAYS).toString), author = Some("Author3")).map {
+            results =>
+              results should have size 1
+              results.head.author.getOrElse("") should equal ("Author3")
+              results.head.date.getOrElse("") should equal (now.plus(3, ChronoUnit.DAYS).toString)
+          }
+        }
+    }
 
-      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(index * 10.toLong), Some(if(index < 3) "Pierre" else "Dark Vador")))
+
+    "return a list of publications filtered by from and to" in {
+      val nbElementsToInsert = 5
+      Future.sequence(insertData(nbElementsToInsert))
+        .flatMap { _ =>
+          PublicationService.findAll(from = Some(now.plus(3, ChronoUnit.DAYS).toString), to = Some(now.plus(5, ChronoUnit.DAYS).toString)).map {
+            results =>
+              results should have size 3
+              results.head.author.getOrElse("") should equal ("Author5")
+              results.head.date.getOrElse("") should equal (now.plus(5, ChronoUnit.DAYS).toString)
+          }
+        }
+    }
+
+    "return a list of publications filtered by from, to and author" in {
+
+      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(if(index < 3) "Pierre" else "Unicorn")))
       val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
       val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
 
       Future.sequence(futureRes)
         .flatMap { _ =>
-          PublicationService.findAll( from = Some(12), to = Some(45), author = Some("Pierre")).map {
+          PublicationService.findAll( from = Some(now.plus(3, ChronoUnit.DAYS).toString), to = Some(now.plus(5, ChronoUnit.DAYS).toString), author = Some("Unicorn")).map {
             results =>
-              results should have size 1
-              results.head.author.getOrElse("") should equal ("Pierre")
-              results.head.date.getOrElse(0) should equal (20)
+              results should have size 3
+              results.head.author.getOrElse("") should equal ("Unicorn")
+              results.head.date.getOrElse("") should equal (now.plus(5, ChronoUnit.DAYS).toString)
           }
         }
     }
