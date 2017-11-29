@@ -21,7 +21,7 @@ object Scraper extends App {
   val database: MongoDatabase = mongoClient.getDatabase("vdm-scraper")
   implicit val coll: MongoCollection[Document] = database.getCollection("publications")
 
-  case class Data (id : String, content : String, author : String, date : Long)
+  case class Data (id : String, content : String, author : String, date : String)
 
   launch(200, 1, List.empty[Data], test = true)
 
@@ -89,7 +89,7 @@ object Scraper extends App {
     * @param footer the footer element
     * @return an option of tuple which contains (author, date)
     */
-  def processFooter (footer : Element) : Option[(String, Long)] = {
+  def processFooter (footer : Element) : Option[(String, String)] = {
     // Get all the divs which contains footer information (author, date ...)
     val divs = footer tryExtract elementList(".text-center") tryExtract element ("div")
     // Extract text for these divs
@@ -103,11 +103,11 @@ object Scraper extends App {
     * @param  line of data
     * @return a tuple (String, Long) with author and date
     */
-  def extractDataForLine (line : String) : Option[(String, Long)] = {
+  def extractDataForLine (line : String) : Option[(String, String)] = {
     Try {
       val data = line.split("/")
       val author = data(0).split("Par")(1).replace("-", "").trim
-      (author, new SimpleDateFormat("E d MMMM yyyy k:m", Locale.FRANCE).parse(data(1).trim).toInstant.toEpochMilli)
+      (author, new SimpleDateFormat("E d MMMM yyyy k:m", Locale.FRANCE).parse(data(1).trim).toInstant.toString)
     } match {
       case Success(date2) => Some(date2)
       case Failure(e) =>

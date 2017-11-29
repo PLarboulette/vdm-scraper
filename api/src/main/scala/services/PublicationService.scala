@@ -13,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Future}
 object PublicationService {
 
 
-  def findAll (from : Option[Long] = None, to : Option[Long] = None, author : Option[String] = None) (implicit coll : MongoCollection[Document], ec : ExecutionContext) : Future[List[Publication]] = {
+  def findAll (from : Option[String] = None, to : Option[String] = None, author : Option[String] = None) (implicit coll : MongoCollection[Document], ec : ExecutionContext) : Future[List[Publication]] = {
 
     def addFilter (filter : Option[Bson], old : Bson): Bson = {
       filter.map (value => Filters.and(old, value)).getOrElse(Filters.and(old))

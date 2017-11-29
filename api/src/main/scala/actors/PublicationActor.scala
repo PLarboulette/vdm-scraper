@@ -29,7 +29,7 @@ object PublicationActor {
 
   def props () (implicit coll : MongoCollection[Document]) = Props(new PublicationActor() (coll))
 
-  case class FindAll (from : Option[Long] = None, to : Option[Long] = None, author : Option[String] = None)
+  case class FindAll (from : Option[String] = None, to : Option[String] = None, author : Option[String] = None)
   case class FindById (id : String)
   case class CleanDB()
 
