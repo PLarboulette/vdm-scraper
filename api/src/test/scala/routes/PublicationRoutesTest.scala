@@ -6,7 +6,7 @@ import java.time.temporal.ChronoUnit
 import actors.PublicationActor
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.HttpResponse
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.{MalformedQueryParamRejection, MissingQueryParamRejection, Route}
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.ActorMaterializer
@@ -41,10 +41,19 @@ class PublicationRoutesTest extends AsyncWordSpec with Matchers with ScalatestRo
   implicit val publicationUnmarshaller : Unmarshaller[String, Publication] =
     Unmarshaller.strict[String, Publication](str => str.parseJson.convertTo[Publication])
 
-  implicit val publicationOutputUnmarshaller: Unmarshaller[HttpResponse, PublicationOutput] =
-    Unmarshaller.strict[HttpResponse, PublicationOutput](str => str.toString().toJson.convertTo[PublicationOutput])
+  def f1 : ExecutionContext => HttpResponse => Future[PublicationOutput] = {
+    implicit ec => {
+      implicit response =>
+        response.entity.toStrict(5.seconds).map(item => {
+          item.data.utf8String.parseJson.convertTo[PublicationOutput]
+        })
+    }
+  }
 
-  def f : ExecutionContext => HttpResponse => Future[PublicationsOutput] = {
+  implicit val publicationOutputUnmarshaller: Unmarshaller[HttpResponse, PublicationOutput] =
+    Unmarshaller.apply[HttpResponse, PublicationOutput] (f1)
+
+  def f2 : ExecutionContext => HttpResponse => Future[PublicationsOutput] = {
     implicit ec => {
       implicit response =>
         response.entity.toStrict(5.seconds).map(item => {
@@ -54,8 +63,7 @@ class PublicationRoutesTest extends AsyncWordSpec with Matchers with ScalatestRo
   }
 
   implicit val publicationsOutputUnmarshaller : Unmarshaller[HttpResponse, PublicationsOutput] =
-    Unmarshaller.apply[HttpResponse, PublicationsOutput] (f)
-
+    Unmarshaller.apply[HttpResponse, PublicationsOutput] (f2)
 
   private def cleanDb() = {
     Await.ready(coll.drop().toFuture(), 3 seconds)
@@ -101,7 +109,6 @@ class PublicationRoutesTest extends AsyncWordSpec with Matchers with ScalatestRo
       val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(s"Author$index")))
       val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
       val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
-
       Future.sequence(futureRes)
         .flatMap { _ =>
           Get("/api/posts?author=Author1") ~> publicationRoutes ~> check {
@@ -114,20 +121,92 @@ class PublicationRoutesTest extends AsyncWordSpec with Matchers with ScalatestRo
       val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(s"Author$index")))
       val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
       val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
-
+      val from = now.plus(4, ChronoUnit.DAYS).toString
       Future.sequence(futureRes)
         .flatMap { _ =>
-          Get("/api/posts?author=Author1") ~> publicationRoutes ~> check {
-            responseAs[PublicationsOutput] shouldEqual PublicationsOutput(1, publicationsToInsert.toList.filter(_.author.contains("Author1")))
+          Get(s"/api/posts?from=$from") ~> publicationRoutes ~> check {
+            responseAs[PublicationsOutput] shouldEqual PublicationsOutput(2, publicationsToInsert.toList.filter(_.date.getOrElse("") >= from).reverse)
+          }
+        }
+    }
+
+    "return a non-empty list of publications filtered by to for GET requests to the /api/posts?to=X path" in {
+      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(s"Author$index")))
+      val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
+      val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
+      val to = now.plus(4, ChronoUnit.DAYS).toString
+      Future.sequence(futureRes)
+        .flatMap { _ =>
+          Get(s"/api/posts?to=$to") ~> publicationRoutes ~> check {
+            responseAs[PublicationsOutput] shouldEqual PublicationsOutput(4, publicationsToInsert.toList.filter(_.date.getOrElse("") <= to).reverse)
+          }
+        }
+    }
+
+    "return a non-empty list of publications filtered by author and to for GET requests to the /api/posts?to=X&author=Y path" in {
+      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(s"Author$index")))
+      val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
+      val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
+      val to = now.plus(4, ChronoUnit.DAYS).toString
+      Future.sequence(futureRes)
+        .flatMap { _ =>
+          Get(s"/api/posts?to=$to&author=Author2") ~> publicationRoutes ~> check {
+            responseAs[PublicationsOutput] shouldEqual PublicationsOutput(1, publicationsToInsert.toList.filter(_.date.getOrElse("") <= to).filter(_.author.getOrElse("")  == "Author2").reverse)
+          }
+        }
+    }
+
+    "return a empty list of publications filtered by author, from and to for GET requests to the /api/posts?from=2&to=X&author=Y path" in {
+      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(s"Author$index")))
+      val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
+      val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
+      val from = now.plus(3, ChronoUnit.DAYS).toString
+      val to = now.plus(4, ChronoUnit.DAYS).toString
+      Future.sequence(futureRes)
+        .flatMap { _ =>
+          Get(s"/api/posts?from=$from&to=$to&author=Author2") ~> publicationRoutes ~> check {
+            responseAs[PublicationsOutput] shouldEqual PublicationsOutput(0, List.empty)
           }
         }
     }
 
 
+    "return a empty publication for GET requests to the /api/posts/id path" in {
+      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(s"Author$index")))
+      val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
+      val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
+      Future.sequence(futureRes)
+        .flatMap { _ =>
+          Get(s"/api/posts/333") ~> publicationRoutes ~> check {
+            responseAs[PublicationOutput] shouldEqual PublicationOutput(None)
+          }
+        }
+    }
 
+    "return a non-empty publication for GET requests to the /api/posts/id path" in {
+      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(s"Author$index")))
+      val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
+      val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
+      Future.sequence(futureRes)
+        .flatMap { _ =>
+          Get(s"/api/posts/2") ~> publicationRoutes ~> check {
+            responseAs[PublicationOutput] shouldEqual PublicationOutput(publicationsToInsert.find(_.id == "2"))
+          }
+        }
+    }
 
-  }
+    "return a error message for GET requests to the /api/posts?from=XInError" in {
+      val test = "Coucou"
+      Get(s"/api/posts?from=$test") ~> publicationRoutes ~> check {
+        rejection shouldEqual   MalformedQueryParamRejection("from", s"Text '$test' could not be parsed at index 0",None)
+      }
+    }
 
-
-
+    "return a error message for GET requests to the /api/posts?to=XInError" in {
+      val test = "Coucou"
+      Get(s"/api/posts?to=$test") ~> publicationRoutes ~> check {
+        rejection shouldEqual   MalformedQueryParamRejection("to", s"Text '$test' could not be parsed at index 0",None)
+      }
+    }
+  } // End API
 }
