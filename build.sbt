@@ -33,7 +33,8 @@ lazy val scraper = project.in(file("scraper"))
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-actor"  % "2.5.4",
       "net.ruippeixotog" %% "scala-scraper" % "2.0.0",
-      "org.mongodb.scala" %% "mongo-scala-driver" % "2.0.0"
+      "org.mongodb.scala" %% "mongo-scala-driver" % "2.0.0",
+      "org.scalatest" %% "scalatest" % "3.0.4" % Test
     ),
     daemonUser in Docker := "root",
     packageName in Docker := "vdm-scraper",
