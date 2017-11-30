@@ -1,21 +1,19 @@
 package services
 
 import java.time.Instant
-import java.time.temporal.{ChronoField, ChronoUnit}
+import java.time.temporal.ChronoUnit
 
-import models.Publication
+import models.Post
 import org.mongodb.scala.{Completed, Document, MongoClient, MongoCollection, MongoDatabase}
 import org.scalatest.{AsyncWordSpec, BeforeAndAfterEach, Matchers}
-
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndAfterEach {
-
+class PostServiceTest extends AsyncWordSpec with Matchers with BeforeAndAfterEach {
 
   val mongoClient: MongoClient = MongoClient("mongodb://localhost:27018")
   val database: MongoDatabase = mongoClient.getDatabase("vdm-scraper-test-services")
-  implicit val coll: MongoCollection[Document] = database.getCollection("publications")
+  implicit val coll: MongoCollection[Document] = database.getCollection("posts")
 
   private def cleanDb() = {
     Await.ready(coll.drop().toFuture(), 3 seconds)
@@ -28,22 +26,22 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
   val now: Instant = Instant.ofEpochMilli(1511982333000L)
 
   def insertData (nbElementsToInsert : Int): List[Future[Completed]] = {
-    val publicationsToInsert = (1 to nbElementsToInsert).map(index =>
-      Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(s"Author$index")))
-    val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
+    val postsToInsert = (1 to nbElementsToInsert).map(index =>
+      Post(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(s"Author$index")))
+    val listDocuments = postsToInsert.toList.map(Post.toDocument)
     listDocuments.map { coll.insertOne(_).toFuture()}
   }
 
   "findAll" should {
     "return nothing" in {
-      PublicationService.findAll().map { publications => publications shouldBe empty }
+      PostService.findAll().map { posts => posts shouldBe empty }
     }
 
-    "return a list of publications sorted by date" in {
+    "return a list of posts sorted by date" in {
       val nbElementsToInsert = 5
       Future.sequence(insertData(nbElementsToInsert))
         .flatMap { _ =>
-          PublicationService.findAll().map {
+          PostService.findAll().map {
             results =>
               results should have size nbElementsToInsert
               results.head.date.getOrElse("") should be > results.last.date.getOrElse("")
@@ -51,11 +49,11 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
         }
     }
 
-    "return a list of publications (1 item) filtered by author" in {
+    "return a list of posts (1 item) filtered by author" in {
       val nbElementsToInsert = 5
       Future.sequence(insertData(nbElementsToInsert))
         .flatMap { _ =>
-          PublicationService.findAll(author = Some("Author3")).map {
+          PostService.findAll(author = Some("Author3")).map {
             results =>
               results should have size 1
               results.head.author.getOrElse("") should equal ("Author3")
@@ -63,14 +61,14 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
         }
     }
 
-    "return a list of publications (many items) filtered by author" in {
+    "return a list of posts (many items) filtered by author" in {
 
-      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(1, ChronoUnit.DAYS).toString), Some(if(index < 3) "Pierre" else "Unicorn")))
-      val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
+      val postsToInsert = (1 to 5).map(index => Post(s"$index", Some(s"Content $index"), Some(now.plus(1, ChronoUnit.DAYS).toString), Some(if(index < 3) "Pierre" else "Unicorn")))
+      val listDocuments = postsToInsert.toList.map(Post.toDocument)
       val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
 
       Future.sequence(futureRes).flatMap { _ =>
-          PublicationService.findAll(author = Some("Pierre")).map {
+          PostService.findAll(author = Some("Pierre")).map {
             results =>
               results should have size 2
               results.head.author.getOrElse("") should equal ("Pierre")
@@ -79,11 +77,11 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
     }
 
 
-    "return a list of publications filtered by from" in {
+    "return a list of posts filtered by from" in {
       val nbElementsToInsert = 5
       Future.sequence(insertData(nbElementsToInsert))
         .flatMap { _ =>
-          PublicationService.findAll(from = Some(now.plus(2, ChronoUnit.DAYS).toString)).map {
+          PostService.findAll(from = Some(now.plus(2, ChronoUnit.DAYS).toString)).map {
             results =>
               results should have size 4
               results.head.author.getOrElse("") should equal ("Author5")
@@ -92,11 +90,11 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
         }
     }
 
-    "return a list of publications filtered by to" in {
+    "return a list of posts filtered by to" in {
       val nbElementsToInsert = 5
       Future.sequence(insertData(nbElementsToInsert))
         .flatMap { _ =>
-          PublicationService.findAll(to = Some(now.plus(3, ChronoUnit.DAYS).toString)).map {
+          PostService.findAll(to = Some(now.plus(3, ChronoUnit.DAYS).toString)).map {
             results =>
               results should have size 3
               results.head.author.getOrElse("") should equal ("Author3")
@@ -105,11 +103,11 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
         }
     }
 
-    "return a list of publications filtered by to and author" in {
+    "return a list of posts filtered by to and author" in {
       val nbElementsToInsert = 5
       Future.sequence(insertData(nbElementsToInsert))
         .flatMap { _ =>
-          PublicationService.findAll(to = Some(now.plus(3, ChronoUnit.DAYS).toString), author = Some("Author3")).map {
+          PostService.findAll(to = Some(now.plus(3, ChronoUnit.DAYS).toString), author = Some("Author3")).map {
             results =>
               results should have size 1
               results.head.author.getOrElse("") should equal ("Author3")
@@ -119,11 +117,11 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
     }
 
 
-    "return a list of publications filtered by from and to" in {
+    "return a list of posts filtered by from and to" in {
       val nbElementsToInsert = 5
       Future.sequence(insertData(nbElementsToInsert))
         .flatMap { _ =>
-          PublicationService.findAll(from = Some(now.plus(3, ChronoUnit.DAYS).toString), to = Some(now.plus(5, ChronoUnit.DAYS).toString)).map {
+          PostService.findAll(from = Some(now.plus(3, ChronoUnit.DAYS).toString), to = Some(now.plus(5, ChronoUnit.DAYS).toString)).map {
             results =>
               results should have size 3
               results.head.author.getOrElse("") should equal ("Author5")
@@ -132,15 +130,15 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
         }
     }
 
-    "return a list of publications filtered by from, to and author" in {
+    "return a list of posts filtered by from, to and author" in {
 
-      val publicationsToInsert = (1 to 5).map(index => Publication(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(if(index < 3) "Pierre" else "Unicorn")))
-      val listDocuments = publicationsToInsert.toList.map(Publication.toDocument)
+      val postsToInsert = (1 to 5).map(index => Post(s"$index", Some(s"Content $index"), Some(now.plus(index, ChronoUnit.DAYS).toString), Some(if(index < 3) "Pierre" else "Unicorn")))
+      val listDocuments = postsToInsert.toList.map(Post.toDocument)
       val futureRes = listDocuments.map { coll.insertOne(_).toFuture()}
 
       Future.sequence(futureRes)
         .flatMap { _ =>
-          PublicationService.findAll( from = Some(now.plus(3, ChronoUnit.DAYS).toString), to = Some(now.plus(5, ChronoUnit.DAYS).toString), author = Some("Unicorn")).map {
+          PostService.findAll( from = Some(now.plus(3, ChronoUnit.DAYS).toString), to = Some(now.plus(5, ChronoUnit.DAYS).toString), author = Some("Unicorn")).map {
             results =>
               results should have size 3
               results.head.author.getOrElse("") should equal ("Unicorn")
@@ -152,12 +150,12 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
 
   "findById" should {
 
-    "return a publication" in {
+    "return a post" in {
       Future.sequence(insertData(5))
         .flatMap { _ =>
-          PublicationService.findById("1").map {
-            publicationOpt =>
-              publicationOpt shouldBe defined
+          PostService.findById("1").map {
+            postOpt =>
+              postOpt shouldBe defined
           }
         }
     }
@@ -165,9 +163,9 @@ class PublicationServiceTest extends AsyncWordSpec with Matchers with BeforeAndA
     "return nothing" in {
       Future.sequence(insertData(5))
         .flatMap { _ =>
-          PublicationService.findById("15").map {
-            publicationOpt =>
-              publicationOpt shouldBe empty
+          PostService.findById("15").map {
+            postOpt =>
+              postOpt shouldBe empty
           }
         }
     }

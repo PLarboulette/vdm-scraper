@@ -12,10 +12,16 @@ object Scraper extends App {
 
   val mongoClient: MongoClient = MongoClient(ConfigFactory.load().getString("database.url"))
   val database: MongoDatabase = mongoClient.getDatabase("vdm-scraper")
-  implicit val coll: MongoCollection[Document] = database.getCollection("publications")
+  implicit val coll: MongoCollection[Document] = database.getCollection("posts")
 
   case class Data (id : String, content : String, author : String, date : String)
 
-  Functions.launch(200, 1, List.empty[Data], test = true)
-
+  MongoHelper.cleanDb().map {
+    _ =>
+      val elements = 200
+      val list = Functions.launch(elements, 1, List.empty[Data])
+      if (list.size == elements) {
+        system.terminate()
+      }
+  }
 }

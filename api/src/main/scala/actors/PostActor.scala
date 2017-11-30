@@ -4,30 +4,29 @@ import akka.actor.{Actor, ActorLogging, Props}
 import akka.pattern.pipe
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.bson.collection.immutable.Document
-import services.PublicationService
+import services.PostService
 
-class PublicationActor () (implicit coll : MongoCollection[Document]) extends Actor with ActorLogging {
+class PostActor()(implicit coll : MongoCollection[Document]) extends Actor with ActorLogging {
 
-  import PublicationActor._
+  import PostActor._
   import context._
 
   override def receive: PartialFunction[Any, Unit] = {
 
     case FindAll(from, to , author) =>
-      PublicationService.findAll(from, to, author) pipeTo sender
+      PostService.findAll(from, to, author) pipeTo sender
 
     case FindById(id) =>
-      PublicationService.findById(id) pipeTo sender
+      PostService.findById(id) pipeTo sender
 
     case CleanDB() =>
-      println("Hello")
-      PublicationService.cleanDb()
+      PostService.cleanDb()
   }
 }
 
-object PublicationActor {
+object PostActor {
 
-  def props () (implicit coll : MongoCollection[Document]) = Props(new PublicationActor() (coll))
+  def props () (implicit coll : MongoCollection[Document]) = Props(new PostActor() (coll))
 
   case class FindAll (from : Option[String] = None, to : Option[String] = None, author : Option[String] = None)
   case class FindById (id : String)

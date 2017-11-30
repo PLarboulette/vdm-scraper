@@ -1,12 +1,10 @@
-import actors.PublicationActor
+import actors.PostActor
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import org.mongodb.scala.{Document, MongoClient, MongoCollection, MongoDatabase}
-import routes.PublicationRoutes
-
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContextExecutor}
+import routes.PostRoutes
+import scala.concurrent.ExecutionContextExecutor
 import com.typesafe.config.ConfigFactory
 
 object Api extends App {
@@ -19,11 +17,11 @@ object Api extends App {
 
   val mongoClient: MongoClient = MongoClient(ConfigFactory.load().getString("database.url"))
   val database: MongoDatabase = mongoClient.getDatabase("vdm-scraper")
-  implicit val coll: MongoCollection[Document] = database.getCollection("publications")
+  implicit val coll: MongoCollection[Document] = database.getCollection("posts")
 
-  val publicationActor = system.actorOf(PublicationActor.props(), "PublicationActor")
+  val postActor = system.actorOf(PostActor.props(), "PostActor")
 
-  val route = PublicationRoutes.getRoutes(publicationActor)
+  val route = PostRoutes.getRoutes(postActor)
 
   val server = "0.0.0.0"
   val port = 8080
