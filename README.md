@@ -15,7 +15,7 @@ _To run tests_
 - Launch tests.sh  (launches tests and remove the previously created mongo container)
 
 _To run in real mode_
-- First way : 
+- First way : (recommended)
     - launch start.sh 
     - Construct images of app and publish its locally
     - Stop if they exist, the previously created containers of app / db 
@@ -43,7 +43,7 @@ _Endpoints (in subject file)_
 - /api/posts/id to get the post by id 
 - /admin/clean which let to clean the db if you want to re-execute the scraper 
 
-
+Don't hesitate to contact me if you have any problems ! 
 
 
 
